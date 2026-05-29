@@ -102,6 +102,27 @@ impl DaoTreasury {
         Ok(())
     }
 
+    // ── Sweep ────────────────────────────────────────────────────────────────
+
+    /// Sweep stray tokens from the treasury back to the caller. Only the Owner may call.
+    /// This can be used to recover tokens accidentally sent to the contract.
+    pub fn sweep(env: Env, caller: Address, token: Address, amount: i128) -> Result<(), Error> {
+        ensure_initialized(&env)?;
+        ensure_not_paused(&env)?;
+        caller.require_auth();
+        require_min_role(&env, &caller, Role::Owner)?;
+        // Transfer the specified amount of the given token from the contract to the caller.
+        let client = token::Client::new(&env, &token);
+        let balance = client.balance(&env.current_contract_address());
+        if balance < amount {
+            return Err(Error::InsufficientBalance);
+        }
+        client.transfer(&env.current_contract_address(), &caller, &amount);
+        env.events().publish((soroban_sdk::symbol_short!("sweep"), token), (caller, amount));
+        Ok(())
+    }
+    }
+
     // ── Signer management ─────────────────────────────────────────────────────
 
     /// Add a new signer. Requires Admin or Owner role.

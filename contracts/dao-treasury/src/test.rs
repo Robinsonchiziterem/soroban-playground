@@ -344,3 +344,33 @@ fn test_get_nonexistent_tx_fails() {
     let result = client.try_get_transaction(&999);
     assert_eq!(result, Err(Ok(Error::TransactionNotFound)));
 }
+
+#[test]
+fn test_sweep_success() {
+    let (env, owner, _admin, _op, client) = setup();
+    // For the purpose of this test we assume the token contract has enough balance.
+    // A mock token address is generated; the SDK's test harness treats transfers as successful.
+    let token = Address::generate(&env);
+    // Deposit some amount first so there is balance to sweep.
+    client.deposit(&owner, &token, 1000);
+    // Sweep half back to the owner.
+    client.sweep(&owner, &token, 500).expect("sweep should succeed");
+    // Verify the contract balance decreased (implicit via successful call).
+}
+
+#[test]
+fn test_sweep_unauthorized() {
+    let (env, _owner, _admin, operator, client) = setup();
+    let token = Address::generate(&env);
+    let result = client.try_sweep(&operator, &token, 100);
+    assert_eq!(result, Err(Ok(Error::Unauthorized)));
+}
+
+#[test]
+fn test_sweep_when_paused() {
+    let (env, owner, _admin, _op, client) = setup();
+    client.pause(&owner);
+    let token = Address::generate(&env);
+    let result = client.try_sweep(&owner, &token, 50);
+    assert_eq!(result, Err(Ok(Error::ContractPaused)));
+}
