@@ -91,3 +91,7 @@ indexer/target/
 # Cache and Data
 backend/cache/
 backend/data/
+.github/
+backend/
+contracts/dao-treasury/target2/
+src/services/
